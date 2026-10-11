@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    name: Build for Windows
+  build-windows-cpu:
+    name: Build for Windows (CPU-Eigen)
     runs-on: windows-2022
     steps:
       - name: Checkout Code
@@ -25,17 +25,17 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          meson setup build --buildtype=release
+          meson setup build --buildtype=release -Dd3d12=false -Dopencl=false -Dwerror=false
           ninja -C build
 
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-windows
+          name: lc0-search-contempt-win-cpu
           path: build/lc0.exe
 
-  build-linux:
-    name: Build for Linux
+  build-linux-cpu:
+    name: Build for Linux (CPU-Eigen)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -46,15 +46,15 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libblas-dev liblapack-dev
+          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler
 
       - name: Configure and Compile
         run: |
-          meson setup build --buildtype=release
+          meson setup build --buildtype=release -Dd3d12=false -Dopencl=false -Dwerror=false
           ninja -C build
 
       - name: Upload Linux Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-linux
+          name: lc0-search-contempt-linux-cpu
           path: build/lc0
