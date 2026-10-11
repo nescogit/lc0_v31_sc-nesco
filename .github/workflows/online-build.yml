@@ -4,33 +4,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-linux-cpu:
-    name: Build for Linux (CPU-Fallback)
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4.2.2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libblas-dev liblapack-dev
-
-      - name: Configure and Compile Linux
-        run: |
-          # Standard Leela 0.31 handles CPU fallbacks using explicit toggle definitions
-          meson setup build --buildtype=release -Dopencl=false -Dnvidia=false -Dgtest=false
-          ninja -C build
-
-      - name: Upload Linux Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: lc0-search-contempt-linux-cpu
-          path: build/lc0
-
   build-windows-cpu:
     name: Build for Windows (CPU-MinGW Cross-Compile)
     runs-on: ubuntu-24.04
@@ -48,7 +21,7 @@ jobs:
 
       - name: Configure and Compile Windows
         run: |
-          # Write a safe cross-compilation environment mapping file
+          # Write the strict, legacy Leela v0.31 option mapping file
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -61,13 +34,13 @@ jobs:
           cpp = 'x86_64-w64-mingw32-g++'
           ar = 'x86_64-w64-mingw32-ar'
           strip = 'x86_64-w64-mingw32-strip'
-          pkgconfig = 'false'
+          pkg-config = 'false'
 
           [project options]
-          opencl = 'false'
-          nvidia = 'false'
-          d3d12 = 'false'
-          gtest = 'false'
+          opencl = false
+          cuda = false
+          dx = false
+          gtest = false
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
