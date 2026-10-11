@@ -28,7 +28,7 @@ jobs:
 
       - name: Configure and Compile Windows Executable
         run: |
-          # Write a clean cross-compilation environment mapping file with NO custom option flags
+          # Explicitly add windres to map the Windows resource compiler check
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -41,6 +41,7 @@ jobs:
           cpp = 'x86_64-w64-mingw32-g++'
           ar = 'x86_64-w64-mingw32-ar'
           strip = 'x86_64-w64-mingw32-strip'
+          windres = 'x86_64-w64-mingw32-windres'
           pkg-config = 'false'
           EOF
           
