@@ -45,7 +45,7 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          # Write a cross-compilation profile directly to force a pure Windows x86_64 target
+          # Force the project options directly inside the cross-compilation file to disable DX12/OpenCL
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -58,6 +58,11 @@ jobs:
           cpp = 'x86_64-w64-mingw32-g++'
           ar = 'x86_64-w64-mingw32-ar'
           strip = 'x86_64-w64-mingw32-strip'
+
+          [project options]
+          blas = true
+          opencl = false
+          werror = false
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
