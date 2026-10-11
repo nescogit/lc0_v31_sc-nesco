@@ -19,72 +19,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Compile Protocol Buffers
+      - name: Locate and Compile Protocol Buffers
         run: |
-          # Natively compile Leela's network protocol blueprints into standard C++ headers
-          protoc --cpp_out=src src/proto/net.proto
+          # Dynamically search the repository to find exactly where net.proto is located
+          PROTO_FILE=$(find . -name "net.proto" -print -quit)
+          PROTO_DIR=$(dirname "$PROTO_FILE")
+          echo "Found net.proto inside directory: $PROTO_DIR"
+          
+          # Compile the engine blueprint headers natively using the dynamically discovered path
+          protoc --proto_path="$PROTO_DIR" --cpp_out="$PROTO_DIR" "$PROTO_FILE"
 
-      - name: Direct Custom Target Compilation
+      - name: Direct Wildcard Target Compilation
         run: |
-          # Isolate and compile ONLY the core, independent CPU mathematics engine source files
-          # This completely leaves the src/neural/dx graphics directory out of the build pipeline!
-          x86_64-w64-mingw32-g++ -std=c++17 -O3 -march=native -DNOMINMAX -DNO_PEXT -pthread \
+          # Use automated find maps to catch every active CPU source file across your codebase
+          # This compiles everything cleanly while completely dropping the src/neural/dx graphics directory!
+          SRC_FILES=$(find src/ -name "*.cc" ! -path "src/neural/dx/*" ! -path "src/benchmark/*" ! -path "src/lc0ctl/*" ! -path "src/selfplay/*" ! -path "src/trainingdata/*" ! -path "src/syzygy/*")
+          PROTO_CC=$(find . -name "*.pb.cc")
+          
+          echo "Compiling files: $SRC_FILES $PROTO_CC"
+          
+          # Run the raw independent cross-compiler natively with lenient legacy flags
+          x86_64-w64-mingw32-g++ -std=c++17 -O3 -march=native -DNOMINMAX -DNO_PEXT -pthread -fpermissive \
             -Isrc \
             -Ithird_party \
-            src/main.cc \
-            src/engine.cc \
-            src/mcts/search.cc \
-            src/mcts/params.cc \
-            src/mcts/node.cc \
-            src/mcts/stoppers/factory.cc \
-            src/mcts/stoppers/common.cc \
-            src/mcts/stoppers/alphazero.cc \
-            src/mcts/stoppers/legacy.cc \
-            src/mcts/stoppers/simple.cc \
-            src/mcts/stoppers/smooth.cc \
-            src/mcts/stoppers/timemgr.cc \
-            src/mcts/stoppers/stoppers.cc \
-            src/chess/position.cc \
-            src/chess/board.cc \
-            src/chess/bitboard.cc \
-            src/chess/uciloop.cc \
-            src/neural/cache.cc \
-            src/neural/loader.cc \
-            src/neural/factory.cc \
-            src/neural/decoder.cc \
-            src/neural/encoder.cc \
-            src/neural/network_legacy.cc \
-            src/neural/network_trivial.cc \
-            src/neural/network_random.cc \
-            src/neural/network_check.cc \
-            src/neural/network_demux.cc \
-            src/neural/network_mux.cc \
-            src/neural/network_rr.cc \
-            src/neural/network_record.cc \
-            src/neural/onnx_adapters.cc \
-            src/neural/onnx_builder.cc \
-            src/neural/onnx_converter.cc \
-            src/neural/blas/network_blas.cc \
-            src/neural/blas/se_unit.cc \
-            src/neural/blas/fully_connected_layer.cc \
-            src/neural/blas/convolution1.cc \
-            src/neural/blas/winograd_convolution3.cc \
-            src/neural/shared/activation.cc \
-            src/neural/shared/winograd_filter.cc \
-            src/proto/net.pb.cc \
-            src/utils/protomessage.cc \
-            src/utils/commandline.cc \
-            src/utils/configfile.cc \
-            src/utils/optionsdict.cc \
-            src/utils/optionsparser.cc \
-            src/utils/files.cc \
-            src/utils/logging.cc \
-            src/utils/string.cc \
-            src/utils/random.cc \
-            src/utils/esc_codes.cc \
-            src/utils/weights_adapter.cc \
-            src/version.cc \
-            -lprotobuf -lws2_32 -lwinmm \
+            -I. \
+            $SRC_FILES \
+            $PROTO_CC \
+            -lws2_32 -lwinmm \
             -o lc0.exe
 
       - name: Upload Windows Binary
