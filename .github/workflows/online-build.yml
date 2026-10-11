@@ -1,11 +1,11 @@
-name: Online Multi-Platform Compiler
+name: Online Windows Compiler
 
 on:
   workflow_dispatch:
 
 jobs:
   build-windows-cpu:
-    name: Build for Windows (CPU-MinGW Cross-Compile)
+    name: Build for Windows (CPU-Only)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -19,9 +19,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Configure and Compile Windows
+      - name: Configure and Compile Windows Executable
         run: |
-          # Write the strict, legacy Leela v0.31 option mapping file
+          # Write a clean cross-compilation environment mapping file with NO custom project options
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -35,12 +35,6 @@ jobs:
           ar = 'x86_64-w64-mingw32-ar'
           strip = 'x86_64-w64-mingw32-strip'
           pkg-config = 'false'
-
-          [project options]
-          opencl = false
-          cuda = false
-          dx = false
-          gtest = false
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
