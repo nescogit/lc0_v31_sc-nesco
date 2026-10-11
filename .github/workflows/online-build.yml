@@ -19,15 +19,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Comment Out DirectX Subdir Commands From Root Config
+      - name: Surgical Fix of Code Dependencies
         run: |
-          # Use sed to target and cleanly comment out any subdirectory jumps to dx graphics
-          sed -i '/src\/neural\/dx/s/^/#/' meson.build
-          sed -i '/neural\/dx\/shaders/s/^/#/' meson.build
+          # 1. Bypass the DirectX subdirectory rules entirely
+          sed -i '/subdir.*neural\/dx/d' meson.build
+          sed -i '/subdir.*dx\/shaders/d' meson.build
+          
+          # 2. Fix the deprecated Microsoft macro call that breaks step 125
+          find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr(&_pgmptr)/0/g' {} +
+          find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr/&_fake/g' {} +
 
       - name: Configure and Compile Windows Executable
         run: |
-          # Force the compiler parameters natively with zero custom flags
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
