@@ -4,14 +4,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    name: Build for Windows (OpenCL)
+  build-windows-cpu:
+    name: Build for Windows (CPU-DNNL)
     runs-on: windows-2022
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -24,17 +25,19 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackend=opencl --buildtype=release -Dwerror=false
+          meson setup build -Dbackends=dnnl --buildtype=release -Dwerror=false -Dopt=generic
           ninja -C build
 
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-windows
-          path: build/lc0.exe
+          name: lc0-search-contempt-win-cpu-dnnl
+          path: |
+            build/lc0.exe
+            build/*.dll
 
-  build-linux:
-    name: Build for Linux (OpenCL)
+  build-linux-cpu:
+    name: Build for Linux (CPU-DNNL)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -45,15 +48,15 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler ocl-icd-opencl-dev opencl-headers
+          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackend=opencl --buildtype=release -Dwerror=false
+          meson setup build -Dbackends=dnnl --buildtype=release -Dwerror=false
           ninja -C build
 
       - name: Upload Linux Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-linux
+          name: lc0-search-contempt-linux-cpu-dnnl
           path: build/lc0
