@@ -4,45 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    name: Build for Windows
-    runs-on: windows-2022
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4.2.2
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5.3.0
-        with:
-          python-version: '3.11'
-
-      - name: Install Build Tools
-        run: |
-          pip install meson ninja
-
-      - name: Install DirectX Shader Compiler (dxc)
-        run: |
-          Invoke-WebRequest -Uri "https://github.com" -OutFile "dxc.zip"
-          Expand-Archive -Path "dxc.zip" -DestinationPath "dxc_extracted"
-          # Add the dxc binary directory to the system PATH so Meson can find it
-          echo "$PWD\dxc_extracted\bin\x64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Configure and Compile
-        run: |
-          meson setup build --buildtype=release
-          ninja -C build
-
-      - name: Upload Windows Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: lc0-search-contempt-windows
-          path: build/lc0.exe
-
-  build-linux:
-    name: Build for Linux
+  build-linux-cpu:
+    name: Build for Linux (CPU)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -63,5 +26,45 @@ jobs:
       - name: Upload Linux Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-linux
+          name: lc0-search-contempt-linux-cpu
           path: build/lc0
+
+  build-windows-cross:
+    name: Build for Windows (Cross-Compiled CPU)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.2.2
+        with:
+          submodules: recursive
+
+      - name: Install Cross-Compiler Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
+
+      - name: Configure and Compile
+        run: |
+          # Write a cross-compilation profile directly to force a pure Windows x86_64 target
+          cat <<EOF > cross_win.txt
+          [host_machine]
+          system = 'windows'
+          cpu_family = 'x86_64'
+          cpu = 'x86_64'
+          endian = 'little'
+
+          [binaries]
+          c = 'x86_64-w64-mingw32-gcc'
+          cpp = 'x86_64-w64-mingw32-g++'
+          ar = 'x86_64-w64-mingw32-ar'
+          strip = 'x86_64-w64-mingw32-strip'
+          EOF
+          
+          meson setup build --cross-file cross_win.txt --buildtype=release
+          ninja -C build
+
+      - name: Upload Windows Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lc0-search-contempt-windows-cpu
+          path: build/lc0.exe
