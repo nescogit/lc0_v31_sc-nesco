@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-windows-cpu:
-    name: Build for Windows (CPU-Eigen)
+    name: Build for Windows (CPU-BLAS)
     runs-on: windows-2022
     steps:
       - name: Checkout Code
@@ -25,7 +25,7 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackend=eigen --buildtype=release -Dwerror=false -Dopt=generic
+          meson setup build --buildtype=release -Dopencl=false -Dcuda=false -Dblas=true -Dwerror=false -Dopt=generic
           ninja -C build
 
       - name: Upload Windows Binary
@@ -35,7 +35,7 @@ jobs:
           path: build/lc0.exe
 
   build-linux-cpu:
-    name: Build for Linux (CPU-Eigen)
+    name: Build for Linux (CPU-BLAS)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -46,11 +46,11 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler
+          sudo apt-get install -y meson ninja-build libgoogle-perftools-dev libprotobuf-dev protobuf-compiler libblas-dev liblapack-dev
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackend=eigen --buildtype=release -Dwerror=false -Dopt=generic
+          meson setup build --buildtype=release -Dopencl=false -Dcuda=false -Dblas=true -Dwerror=false -Dopt=generic
           ninja -C build
 
       - name: Upload Linux Binary
