@@ -19,15 +19,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Create Fake DXC to Bypass Verification
+      - name: Hard-Disable DirectX Backend from Source Code
         run: |
-          sudo echo '#!/bin/sh' > /usr/local/bin/dxc
-          sudo echo 'exit 0' >> /usr/local/bin/dxc
-          sudo chmod +x /usr/local/bin/dxc
+          # Use sed to find where Meson jumps into the DX12 folder and completely delete that instruction block
+          sed -i '/subdir.*neural.dx/d' src/meson.build
 
       - name: Configure and Compile Windows Executable
         run: |
-          # Inject legacy compiler options to tolerate vintage C++ syntax issues
+          # Force the compiler parameters natively
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
