@@ -17,50 +17,78 @@ jobs:
       - name: Install Cross-Compiler Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
+          sudo apt-get install -y mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Create Fake DXC to Bypass Verification
+      - name: Compile Protocol Buffers
         run: |
-          # 1. Critical Mock DXC script to satisfy the hardcoded dxc layout check
-          sudo echo '#!/bin/sh' > /usr/local/bin/dxc
-          sudo echo 'exit 0' >> /usr/local/bin/dxc
-          sudo chmod +x /usr/local/bin/dxc
+          # Natively compile Leela's network protocol blueprints into standard C++ headers
+          protoc --cpp_out=src src/proto/net.proto
 
-      - name: Surgical Fix of Code Dependencies
+      - name: Direct Custom Target Compilation
         run: |
-          # 2. Fix the deprecated Microsoft initialization pointer macro call that breaks legacy Leela linking at step 125
-          find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr(&_pgmptr)/0/g' {} +
-          find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr/&_fake/g' {} +
-
-      - name: Configure and Compile Windows Target
-        run: |
-          # 3. Write the complete cross-file mapping table with windres included
-          cat <<EOF > cross_win.txt
-          [host_machine]
-          system = 'windows'
-          cpu_family = 'x86_64'
-          cpu = 'x86_64'
-          endian = 'little'
-
-          [binaries]
-          c = 'x86_64-w64-mingw32-gcc'
-          cpp = 'x86_64-w64-mingw32-g++'
-          ar = 'x86_64-w64-mingw32-ar'
-          strip = 'x86_64-w64-mingw32-strip'
-          windres = 'x86_64-w64-mingw32-windres'
-          pkg-config = 'false'
-
-          [built-in options]
-          cpp_std = 'c++17'
-          cpp_args = ['-fpermissive', '-Wno-error']
-          c_args = ['-Wno-error']
-          EOF
-          
-          meson setup build --cross-file cross_win.txt --buildtype=release
-          ninja -C build
+          # Isolate and compile ONLY the core, independent CPU mathematics engine source files
+          # This completely leaves the src/neural/dx graphics directory out of the build pipeline!
+          x86_64-w64-mingw32-g++ -std=c++17 -O3 -march=native -DNOMINMAX -DNO_PEXT -pthread \
+            -Isrc \
+            -Ithird_party \
+            src/main.cc \
+            src/engine.cc \
+            src/mcts/search.cc \
+            src/mcts/params.cc \
+            src/mcts/node.cc \
+            src/mcts/stoppers/factory.cc \
+            src/mcts/stoppers/common.cc \
+            src/mcts/stoppers/alphazero.cc \
+            src/mcts/stoppers/legacy.cc \
+            src/mcts/stoppers/simple.cc \
+            src/mcts/stoppers/smooth.cc \
+            src/mcts/stoppers/timemgr.cc \
+            src/mcts/stoppers/stoppers.cc \
+            src/chess/position.cc \
+            src/chess/board.cc \
+            src/chess/bitboard.cc \
+            src/chess/uciloop.cc \
+            src/neural/cache.cc \
+            src/neural/loader.cc \
+            src/neural/factory.cc \
+            src/neural/decoder.cc \
+            src/neural/encoder.cc \
+            src/neural/network_legacy.cc \
+            src/neural/network_trivial.cc \
+            src/neural/network_random.cc \
+            src/neural/network_check.cc \
+            src/neural/network_demux.cc \
+            src/neural/network_mux.cc \
+            src/neural/network_rr.cc \
+            src/neural/network_record.cc \
+            src/neural/onnx_adapters.cc \
+            src/neural/onnx_builder.cc \
+            src/neural/onnx_converter.cc \
+            src/neural/blas/network_blas.cc \
+            src/neural/blas/se_unit.cc \
+            src/neural/blas/fully_connected_layer.cc \
+            src/neural/blas/convolution1.cc \
+            src/neural/blas/winograd_convolution3.cc \
+            src/neural/shared/activation.cc \
+            src/neural/shared/winograd_filter.cc \
+            src/proto/net.pb.cc \
+            src/utils/protomessage.cc \
+            src/utils/commandline.cc \
+            src/utils/configfile.cc \
+            src/utils/optionsdict.cc \
+            src/utils/optionsparser.cc \
+            src/utils/files.cc \
+            src/utils/logging.cc \
+            src/utils/string.cc \
+            src/utils/random.cc \
+            src/utils/esc_codes.cc \
+            src/utils/weights_adapter.cc \
+            src/version.cc \
+            -lprotobuf -lws2_32 -lwinmm \
+            -o lc0.exe
 
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
         with:
           name: lc0-search-contempt-windows-cpu
-          path: build/lc0.exe
+          path: lc0.exe
