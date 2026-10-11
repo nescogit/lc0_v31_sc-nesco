@@ -19,24 +19,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build mingw-w64 g++-mingw-w64 libprotobuf-dev protobuf-compiler
 
-      - name: Obliterate DirectX Code base
+      - name: Comment Out DirectX Subdir Commands From Root Config
         run: |
-          # Completely empty out the DirectX folder so the compiler cannot build it
-          rm -rf src/neural/dx/*
-          # Create a blank fallback header so the main compiler doesn't throw a missing file error
-          mkdir -p src/neural/dx/shaders
-          echo "// Empty fallback" > src/neural/dx/dx_backend.h
-          echo "// Empty fallback" > src/neural/dx/network_dx.h
-
-      - name: Create Fake DXC to Bypass Verification
-        run: |
-          sudo echo '#!/bin/sh' > /usr/local/bin/dxc
-          sudo echo 'exit 0' >> /usr/local/bin/dxc
-          sudo chmod +x /usr/local/bin/dxc
+          # Use sed to target and cleanly comment out any subdirectory jumps to dx graphics
+          sed -i '/src\/neural\/dx/s/^/#/' meson.build
+          sed -i '/neural\/dx\/shaders/s/^/#/' meson.build
 
       - name: Configure and Compile Windows Executable
         run: |
-          # Build a clean cross-file profile with zero custom option variables
+          # Force the compiler parameters natively with zero custom flags
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
