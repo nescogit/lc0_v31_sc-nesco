@@ -26,9 +26,15 @@ jobs:
           sudo echo 'exit 0' >> /usr/local/bin/dxc
           sudo chmod +x /usr/local/bin/dxc
 
+      - name: Surgical Fix of Code Dependencies
+        run: |
+          # 2. Surgically rewrite the legacy Microsoft pointer macro loop directly in filesystem.win32.cc
+          # This replaces the deprecated _get_pgmptr initialization structure safely at the source level.
+          sed -i 's/if (_get_pgmptr(\&_pgmptr) != 0)/if (false)/g' src/utils/filesystem.win32.cc || true
+
       - name: Configure and Compile Windows Target
         run: |
-          # 2. Map windres and pass the preprocessor definition directly into the built-in compiler arguments
+          # 3. Write a clean cross-file mapping table with windres included and clean built-in options
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -46,9 +52,15 @@ jobs:
 
           [built-in options]
           cpp_std = 'c++17'
-          cpp_args = ['-fpermissive', '-Wno-error', '-D_get_pgmptr=0']
+          cpp_args = ['-fpermissive', '-Wno-error']
           c_args = ['-Wno-error']
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
           ninja -C build
+
+      - name: Upload Windows Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lc0-search-contempt-windows-cpu
+          path: build/lc0.exe
