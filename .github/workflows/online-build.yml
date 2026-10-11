@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-windows-cpu:
-    name: Build for Windows (CPU)
+    name: Build for Windows (CPU/Fallback)
     runs-on: windows-2022
     steps:
       - name: Checkout Code
@@ -25,7 +25,7 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackends=blas --buildtype=release -Dwerror=false -Dopt=generic
+          meson setup build --buildtype=release -Dopt=generic
           ninja -C build
 
       - name: Upload Windows Binary
@@ -35,7 +35,7 @@ jobs:
           path: build/lc0.exe
 
   build-linux-cpu:
-    name: Build for Linux (CPU)
+    name: Build for Linux (CPU/Fallback)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code
@@ -50,7 +50,7 @@ jobs:
 
       - name: Configure and Compile
         run: |
-          meson setup build -Dbackends=blas --buildtype=release -Dwerror=false -Dopt=generic
+          meson setup build --buildtype=release -Dopt=generic
           ninja -C build
 
       - name: Upload Linux Binary
