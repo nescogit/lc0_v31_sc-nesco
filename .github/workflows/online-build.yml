@@ -21,26 +21,22 @@ jobs:
 
       - name: Surgical Removal of DirectX From Source Manifests
         run: |
-          # 1. Erase any subdirectory commands pointing to the dx graphics block from the root config
+          # 1. Comment out the hardcoded DirectX subdirectory include commands from the configuration manifests
           sed -i '/subdir.*neural\/dx/d' meson.build || true
           sed -i '/subdir.*dx\/shaders/d' meson.build || true
           
-          # 2. Clean out the hardcoded filenames from the primary source arrays inside meson.build
-          sed -i '/neural\/dx\/network_dx.cc/d' meson.build || true
-          sed -i '/neural\/dx\/shader_wrapper.cc/d' meson.build || true
-          sed -i '/neural\/dx\/layers_dx.cc/d' meson.build || true
-          
-          # 3. Hard-wipe the inner factory.cc loop so it never triggers the DxNetwork component calls
+          # 2. Hard-wipe the inner factory.cc loop so it never triggers the DxNetwork component calls
           sed -i '/#include "neural\/dx\/network_dx.h"/d' src/neural/factory.cc || true
           sed -i '/if (backend == "dx")/,/}/d' src/neural/factory.cc || true
           
-          # 4. Surgical patch restricted ONLY to the legacy win32 filesystem loader code to clear the step 125 block
-          sed -i 's/_get_pgmptr(&_pgmptr)/0/g' src/utils/filesystem.win32.cc || true
-          sed -i 's/_get_pgmptr/\&_fake/g' src/utils/filesystem.win32.cc || true
+          # 3. Clean out the hardcoded filenames from the primary source arrays inside meson.build
+          sed -i '/neural\/dx\/network_dx.cc/d' meson.build || true
+          sed -i '/neural\/dx\/shader_wrapper.cc/d' meson.build || true
+          sed -i '/neural\/dx\/layers_dx.cc/d' meson.build || true
 
       - name: Configure and Compile Windows Target
         run: |
-          # 5. Write the complete cross-file mapping table with windres included
+          # 4. Write the complete cross-file mapping table with windres and the link-time symbol mapping definition included
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -60,6 +56,8 @@ jobs:
           cpp_std = 'c++17'
           cpp_args = ['-fpermissive', '-Wno-error']
           c_args = ['-Wno-error']
+          cpp_link_args = ['-Wl,--defsym,_get_pgmptr=0']
+          c_link_args = ['-Wl,--defsym,_get_pgmptr=0']
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
