@@ -35,15 +35,13 @@ jobs:
           sed -i '/neural\/dx\/layers_dx.cc/d' meson.build || true
 
           # 4. Universal Source-Level Pointer Fix
-          # This surgically renames the macro and its pointer calls inside local files ONLY (like filesystem.win32.cc and commandline.cc).
-          # It replaces the broken function blocks with an absolute early fallback statement to clear the step 125 block completely.
           find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/if (!_get_pgmptr(&pgmptr) && pgmptr != nullptr && \*pgmptr)/if (false)/g' {} +
           find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/if (_get_pgmptr(&_pgmptr) != 0)/if (false)/g' {} +
           find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr/\&_fake_macro_skip/g' {} +
 
       - name: Configure and Compile Windows Target
         run: |
-          # 5. Write the complete cross-file mapping table with windres included and clean built-in parameters
+          # 5. Write the complete cross-file mapping table with windres AND strict static linking flags included
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -63,6 +61,8 @@ jobs:
           cpp_std = 'c++17'
           cpp_args = ['-fpermissive', '-Wno-error']
           c_args = ['-Wno-error']
+          cpp_link_args = ['-static', '-static-libgcc', '-static-libstdc++']
+          c_link_args = ['-static', '-static-libgcc']
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
@@ -71,5 +71,5 @@ jobs:
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-windows-cpu
+          name: lc0-search-contempt-windows-cpu-static
           path: build/lc0.exe
