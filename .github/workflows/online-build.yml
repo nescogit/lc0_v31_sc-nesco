@@ -40,13 +40,12 @@ jobs:
           find src/ -type f \( -name "*.cc" -o -name "*.h" \) -exec sed -i 's/_get_pgmptr/\&_fake_macro_skip/g' {} +
 
           # 5. Surgical patch to strip out the cloud native optimization strings from the configuration build loop
-          # This replaces them with an optimized AVX2 and BMI2 instruction profile matching your i7-8700K
           sed -i "s/-march=native/-mavx2 -mbmi2 -mpopcnt/g" meson.build || true
           if [ -f src/meson.build ]; then sed -i "s/-march=native/-mavx2 -mbmi2 -mpopcnt/g" src/meson.build || true; fi
 
       - name: Configure and Compile Windows Target
         run: |
-          # 6. Write the complete cross-file mapping table with windres AND comprehensive static overrides included
+          # 6. Write the complete cross-file mapping table with windres and standard static libraries mapped natively
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -66,15 +65,16 @@ jobs:
           cpp_std = 'c++17'
           cpp_args = ['-fpermissive', '-Wno-error', '-mavx2', '-mbmi2', '-mpopcnt']
           c_args = ['-Wno-error', '-mavx2', '-mbmi2', '-mpopcnt']
-          cpp_link_args = ['-static', '-static-libgcc', '-static-libstdc++', '-Wl,-Bstatic', '-lz', '-Wl,-Bdynamic']
-          c_link_args = ['-static', '-static-libgcc', '-Wl,-Bstatic', '-lz', '-Wl,-Bdynamic']
+          cpp_link_args = ['-static', '-static-libgcc', '-static-libstdc++']
+          c_link_args = ['-static', '-static-libgcc']
           EOF
           
-          meson setup build --cross-file cross_win.txt --buildtype=release
+          # Force static building via standard Meson target flags matching the official instruction layout guidelines
+          meson setup build --cross-file cross_win.txt --buildtype=release -Ddefault_library=static
           ninja -C build
 
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
         with:
-          name: lc0-search-contempt-windows-i7-8700k-avx2
+          name: lc0-search-contempt-windows-i7-8700k-static
           path: build/lc0.exe
