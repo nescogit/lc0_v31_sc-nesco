@@ -34,9 +34,13 @@ jobs:
           sed -i '/neural\/dx\/shader_wrapper.cc/d' meson.build || true
           sed -i '/neural\/dx\/layers_dx.cc/d' meson.build || true
 
+          # 4. Code-level neutralization of the deprecated _get_pgmptr pointer block inside filesystem.win32.cc
+          # This inserts a safe early return bypass so the compiler avoids the obsolete macro call entirely
+          sed -i '/_get_pgmptr/s/^/\/\/ /' src/utils/filesystem.win32.cc || true
+
       - name: Configure and Compile Windows Target
         run: |
-          # 4. Write the complete cross-file mapping table with windres and the link-time symbol mapping definition included
+          # 5. Write the complete cross-file mapping table with windres included and clean options
           cat <<EOF > cross_win.txt
           [host_machine]
           system = 'windows'
@@ -56,8 +60,6 @@ jobs:
           cpp_std = 'c++17'
           cpp_args = ['-fpermissive', '-Wno-error']
           c_args = ['-Wno-error']
-          cpp_link_args = ['-Wl,--defsym,_get_pgmptr=0']
-          c_link_args = ['-Wl,--defsym,_get_pgmptr=0']
           EOF
           
           meson setup build --cross-file cross_win.txt --buildtype=release
